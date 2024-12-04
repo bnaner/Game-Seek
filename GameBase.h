@@ -12,8 +12,14 @@
 
 class GameBase{
     unordered_map<string, Node> import_games();
+    vector<pair<Node, double>> familiarity_list_helper(string name);
+    void quick_recommendation_list(vector<pair<Node, double>>& recommendation_list, int low, int high);
+    int quick_helper(vector<pair<Node, double>>& recommendation_list, int low, int high);
 
 public:
     GameBase();
     unordered_map<string, Node> games;
+    vector<pair<Node, double>> familiarity_list(string name);
+
+    void shell_recommendation_list(vector<pair<Node, double>>& recommendation_list);
 };

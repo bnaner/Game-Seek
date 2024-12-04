@@ -13,7 +13,6 @@ public:
     Node(){};
     string name;
     int age = 0; // Minimum age rating to play the game, not all games have this property properly filled however
-    double recommendation_score = 0.0; // Formula TBD, (shared genres*2 / total genres between two games) + .1 per shared publisher +- .1 for rating
     double price = 0.0;
     double positive_rating = 0;
     double negative_rating = 0;
