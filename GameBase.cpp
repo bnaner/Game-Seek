@@ -129,10 +129,23 @@ unordered_map<string, Node> GameBase::import_games() {
     return games;
 }
 
-vector<pair<Node, double>> GameBase::familiarity_list(string name) {
-    vector<pair<Node, double>> recommendation_list = familiarity_list_helper(name);
-    quick_recommendation_list(recommendation_list, 0, recommendation_list.size());
-    return recommendation_list;
+vector<pair<Node, double>> GameBase::familiarity_list(string name, double& q, double& s) {
+    vector<pair<Node, double>> recommendation_list_Q = familiarity_list_helper(name);
+    vector<pair<Node, double>> recommendation_list_S = recommendation_list_Q;
+
+    auto q_start = chrono::high_resolution_clock::now();
+    quick_recommendation_list(recommendation_list_Q, 0, recommendation_list_Q.size());
+    auto q_stop = chrono::high_resolution_clock::now();
+    chrono::duration<double, milli> q_time = q_stop - q_start;
+    q += q_time.count();
+
+    auto s_start = chrono::high_resolution_clock::now();
+    shell_recommendation_list(recommendation_list_S);
+    auto s_stop = chrono::high_resolution_clock::now();
+    chrono::duration<double, milli> s_time = s_stop - s_start;
+    s+= s_time.count();
+
+    return recommendation_list_Q;
 }
 
 // Returns a list of games and a familiarity score, with higher scores being more similar to the inputted game
@@ -152,9 +165,7 @@ vector<pair<Node, double>> GameBase::familiarity_list_helper(string name){
         double score = 0;
         double tag_score = 0;
         double tag_matches = 0;
-        if (iter->first == "ALTF42"){
-            cout << " ";
-        }
+
         for (auto tag = selected_game.tags.begin(); tag != selected_game.tags.end(); tag++){
             if(iter->second.tags.find(*tag) != iter->second.tags.end())
                 tag_matches++;
@@ -208,7 +219,18 @@ int GameBase::quick_helper(vector<pair<Node, double>>& recommendation_list, int 
 
 
 void GameBase::shell_recommendation_list(vector<pair<Node, double>>& recommendation_list) {
-
+    for(int gap = recommendation_list.size() / 2; gap > 0; gap /= 2){
+        for(int i = 0; i + gap < recommendation_list.size(); i++){
+            if(recommendation_list[i].second < recommendation_list[i+gap].second){
+                swap(recommendation_list[i], recommendation_list[i+gap]);
+                int current = i;
+                while (current - gap >= 0 && recommendation_list[current].second > recommendation_list[current-gap].second){
+                    swap(recommendation_list[current], recommendation_list[current-gap]);
+                    current -= gap;
+                }
+            }
+        }
+    }
 }
 
 

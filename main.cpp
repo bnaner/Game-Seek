@@ -20,15 +20,35 @@ int main(){
     getline(cin, selected);
 
     bool found = false;
-    if (data.games.find(selected) == data.games.end())
+    if (data.games.find(selected) == data.games.end()){
         cout << "Sorry I don't know that one." << endl;
+        return 0;
+    }
     else{
         cout << "Oh yea, I know that game!" << endl;
         found = true;
     }
 
+    vector<pair<Node, double>> recommendation_list;
+    double q_time = 0, s_time = 0; // Will store time to completed sorts
     if (found){
-        vector<pair<Node, double>> recommendation_list = data.familiarity_list(selected);
-        cout << "I got some recommendations for you" << endl;
+        recommendation_list = data.familiarity_list(selected, q_time, s_time);
+        cout << "I got some recommendations for you" << endl << endl;
     }
+
+    bool accepted = false;
+    int pass = 1;
+    while(!accepted && pass < recommendation_list.size()){
+        cout << "I recommend you try \"" << recommendation_list[pass].first.name << "\"" << endl;
+        cout << "Type y if you like the recommendation or any other character if you want a new one." << endl;
+        string response;
+        cin >> response;
+        if(response != "y")
+            pass++;
+        else
+            break;
+    }
+    cout << endl;
+    cout << "It took quick sort " << q_time << " ms and shell sort " << s_time << " ms to find your recommendations" << endl;
+    cout << "Thank you for using out app!" << endl;
 }
