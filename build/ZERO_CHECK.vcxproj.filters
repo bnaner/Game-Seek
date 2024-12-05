@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\saysa\.vscode\Game-Seek\build\CMakeFiles\95a3b2809bb157d3d51ae3a063d61a40\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{6D58959F-E97E-3899-8DCD-536939B04536}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
