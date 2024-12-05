@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game-Seek</title>
     <style>
         /* Reset margin and padding for all elements */
@@ -11,10 +10,20 @@
             margin: 0;
             padding: 0;
         }
+
+        /* Base styles for the page */
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
         }
+
+        /* Main header */
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        /* Container for the search and results sections */
         .container {
             display: flex;
             flex-wrap: wrap;
@@ -22,24 +31,76 @@
             width: 100%;
             margin: 0 auto;
         }
+
+        /* Styles for the search section */
         #search-container {
+            position: relative;
             display: flex;
             flex-direction: column;
             flex: 1 1 30%;
             max-width: 30%;
             margin-right: 2%;
         }
+
+        /* Search input field */
         #search-bar {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
             font-size: 16px;
         }
+
+        /* Search button */
         #search-button {
             padding: 10px;
             font-size: 16px;
             cursor: pointer;
+            border: none; 
+            background-color: #007BFF; 
+            color: white; 
+            margin-bottom: 10px;
+            outline: none; 
+            box-shadow: none; 
+            appearance: none;
         }
+
+        /* Search button hover effect */
+        #search-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Dropdown suggestions for search */
+        #suggestions {
+            position: absolute;
+            top: 40px; 
+            background-color: white;
+            border: 1px solid #ccc; 
+            border-top: none;
+            width: calc(100%);
+            max-height: 200px;
+            overflow-y: auto; 
+            z-index: 1000; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Individual suggestion item in dropdown */
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee; 
+        }
+
+        /* Remove bottom border for the last suggestion */
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Highlight suggestion item on hover */
+        .suggestion-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Styles for the game details/results section */
         #results {
             flex: 1 1 65%;
             max-width: 65%;
@@ -47,34 +108,83 @@
             padding: 20px;
             text-align: center;
         }
+
+        /* Game image in the results section */
         #game-image {
             max-width: 100%;
             height: auto;
             margin-bottom: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
         }
+
+        /* Game name heading */
+        #game-name {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        /* Game detail labels (e.g., price, rating, description) */
         .game-detail {
             font-size: 18px;
             margin-bottom: 10px;
         }
-        /* Responsive adjustments */
+
+        /* Quick sort and shell sort time labels */
+        .sort-time {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        /* Navigation buttons for previous/next games */
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .navigation-buttons button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* Responsive styles for smaller screens */
         @media (max-width: 768px) {
-            #search-container,
-            #results {
+            #search-container, #results {
                 flex: 1 1 100%;
                 max-width: 100%;
                 margin-right: 0;
                 margin-top: 20px;
             }
+            .navigation-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            .navigation-buttons button {
+                margin-bottom: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Main page title -->
     <h1>Game-Seek</h1>
+
+    <!-- Container for search and game details -->
     <div class="container">
+        <!-- Search section -->
         <div id="search-container">
             <input type="text" id="search-bar" placeholder="Search for a game...">
+            <div id="suggestions"></div>
             <button id="search-button">Search</button>
+
+            <!-- Sort times -->
+            <p id="quick-sort-time" class="sort-time">Quick Sort Time: N/A</p>
+            <p id="shell-sort-time" class="sort-time">Shell Sort Time: N/A</p>
         </div>
+
+        <!-- Results section -->
         <div id="results">
             <h2 id="game-name">Game Name</h2>
             <img id="game-image" src="" alt="Game Image">
@@ -87,59 +197,119 @@
             </div>
         </div>
     </div>
+
     <script>
+        // References to DOM elements
         const searchButton = document.getElementById('search-button');
+        const searchBar = document.getElementById('search-bar');
+        const suggestionsContainer = document.getElementById('suggestions');
         const prevButton = document.getElementById('prev-button');
         const nextButton = document.getElementById('next-button');
 
-        let currentIndex = 0;
-        let results = [];
+        let currentIndex = 0; // Tracks current game being displayed
+        let gamesToDisplay = []; // Stores games to be displayed (search + recommendations)
+        let debounceTimeout; // For debouncing user input
+        let recommendationsLoaded = false; // Tracks whether recommendations are loaded
 
-        async function fetchGame(query) {
+        // Handle search bar input and fetch suggestions
+        searchBar.addEventListener('input', () => {
+            const query = searchBar.value.trim();
+
+            // Clear previous suggestions
+            suggestionsContainer.innerHTML = '';
+
+            if (query.length === 0) {
+                return;
+            }
+
+            // Debounce requests to avoid excessive API calls
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                fetchSuggestions(query);
+            }, 300);
+        });
+
+        // Fetch autocomplete suggestions
+        async function fetchSuggestions(query) {
             try {
-                const response = await fetch(`/search?query=${encodeURIComponent(query)}`);
+                const response = await fetch(`/autocomplete?query=${encodeURIComponent(query)}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
-                console.log('Data received from server:', data); // For debugging
-                results = data.results;
+                displaySuggestions(data.suggestions);
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+            }
+        }
+
+        // Display autocomplete suggestions
+        function displaySuggestions(suggestions) {
+            suggestionsContainer.innerHTML = ''; // Clear previous suggestions
+            suggestions.forEach((suggestion) => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = suggestion;
+
+                item.addEventListener('click', () => {
+                    searchBar.value = suggestion;
+                    suggestionsContainer.innerHTML = '';
+                    fetchGame(suggestion);
+                });
+
+                suggestionsContainer.appendChild(item);
+            });
+        }
+
+        // Fetch game data and recommendations
+        async function fetchGame(gameName) {
+            try {
+                const response = await fetch(`/search?query=${encodeURIComponent(gameName)}`);
+                const data = await response.json();
+                const originalGame = data.results[0];
+                gamesToDisplay = [originalGame];
                 currentIndex = 0;
                 displayGame();
+                await fetchRecommendations(originalGame.name);
             } catch (error) {
                 console.error('Error fetching game data:', error);
-                alert('Failed to fetch game data. Please try again later.');
             }
         }
 
+        // Fetch game recommendations
+        async function fetchRecommendations(gameName) {
+            try {
+                const response = await fetch(`/recommend?game=${encodeURIComponent(gameName)}`);
+                const data = await response.json();
+
+                // Update sort times
+                if (data.quick_sort_time_ms !== undefined && data.shell_sort_time_ms !== undefined) {
+                    document.getElementById('quick-sort-time').textContent = `Quick Sort Time: ${data.quick_sort_time_ms.toFixed(2)} ms`;
+                    document.getElementById('shell-sort-time').textContent = `Shell Sort Time: ${data.shell_sort_time_ms.toFixed(2)} ms`;
+                } else {
+                    document.getElementById('quick-sort-time').textContent = 'Quick Sort Time: N/A';
+                    document.getElementById('shell-sort-time').textContent = 'Shell Sort Time: N/A';
+                }
+            } catch (error) {
+                console.error('Error fetching recommendations:', error);
+                document.getElementById('quick-sort-time').textContent = 'Quick Sort Time: N/A';
+                document.getElementById('shell-sort-time').textContent = 'Shell Sort Time: N/A';
+            }
+        }
+
+        // Display current game in results section
         function displayGame() {
-            if (!results || results.length === 0) {
-                document.getElementById('game-name').textContent = 'No games found for your search.';
-                document.getElementById('game-image').src = '';
-                document.getElementById('game-image').alt = 'No Image Available';
-                document.getElementById('game-price').textContent = 'Price: N/A';
-                document.getElementById('game-rating').textContent = 'Rating: N/A';
-                document.getElementById('game-description').textContent = 'Description: N/A';
-                return;
+            if (currentIndex >= 0 && currentIndex < gamesToDisplay.length) {
+                const game = gamesToDisplay[currentIndex];
+                document.getElementById('game-name').textContent = game.name;
+                document.getElementById('game-image').src = game.image || '';
+                document.getElementById('game-price').textContent = `Price: $${game.price}`;
+                document.getElementById('game-rating').textContent = `Rating: ${parseFloat(game.rating).toFixed(2)}`;
+                document.getElementById('game-description').textContent = game.description;
             }
-            const game = results[currentIndex];
-            document.getElementById('game-name').textContent = `${game.name}`;
-            document.getElementById('game-image').src = game.image || '';
-            document.getElementById('game-image').alt = game.name;
-            document.getElementById('game-price').textContent = `Price: $${game.price}`;
-            document.getElementById('game-rating').textContent = `Rating: ${game.rating}`;
-            document.getElementById('game-description').textContent = `Description: ${game.description}`;
         }
 
-        searchButton.addEventListener('click', () => {
-            const query = document.getElementById('search-bar').value.trim();
-            if (query === '') {
-                alert('Please enter a search term.');
-                return;
-            }
-            fetchGame(query);
-        });
-
+        // Navigate to the previous game
         prevButton.addEventListener('click', () => {
             if (currentIndex > 0) {
                 currentIndex--;
@@ -147,8 +317,9 @@
             }
         });
 
+        // Navigate to the next game
         nextButton.addEventListener('click', () => {
-            if (currentIndex < results.length - 1) {
+            if (currentIndex < gamesToDisplay.length - 1) {
                 currentIndex++;
                 displayGame();
             }
@@ -156,4 +327,6 @@
     </script>
 </body>
 </html>
+
+
 

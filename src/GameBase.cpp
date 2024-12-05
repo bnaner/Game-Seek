@@ -134,7 +134,7 @@ vector<pair<Node, double>> GameBase::familiarity_list(string name, double& q, do
     vector<pair<Node, double>> recommendation_list_S = recommendation_list_Q;
 
     auto q_start = chrono::high_resolution_clock::now();
-    quick_recommendation_list(recommendation_list_Q, 0, recommendation_list_Q.size());
+    quick_recommendation_list(recommendation_list_Q, 0, recommendation_list_Q.size() - 1);
     auto q_stop = chrono::high_resolution_clock::now();
     chrono::duration<double, milli> q_time = q_stop - q_start;
     q += q_time.count();
@@ -188,33 +188,24 @@ vector<pair<Node, double>> GameBase::familiarity_list_helper(string name){
 // Sorting lecture slides used as reference for both algorithms
 void GameBase::quick_recommendation_list(vector<pair<Node, double>>& recommendation_list, int low, int high) {
     if (low < high){
-        int pivot_index = quick_helper(recommendation_list, low, high); // Partially sorts the array based on pivot
-        quick_recommendation_list(recommendation_list, low, pivot_index - 1); // Sorts subarray less than pivot
-        quick_recommendation_list(recommendation_list, pivot_index+1, high); // Sorts subarray more than pivot
+        int pivot_index = quick_helper(recommendation_list, low, high);
+        quick_recommendation_list(recommendation_list, low, pivot_index - 1);
+        quick_recommendation_list(recommendation_list, pivot_index + 1, high);
     }
 }
 
 int GameBase::quick_helper(vector<pair<Node, double>>& recommendation_list, int low, int high) {
-    int pivot_index = low;
-    int upward = low, downward = high;
+    double pivot_value = recommendation_list[high].second;
+    int i = low - 1;
 
-    while (upward < downward){
-        for(int i = upward; i < high; i++){
-            if (recommendation_list[i].second < recommendation_list[pivot_index].second)
-                break;
-            upward++;
-        }
-        for(int i = downward; i > low; i--){
-            if (recommendation_list[i].second > recommendation_list[pivot_index].second)
-                break;
-            downward--;
-        }
-        if(upward < downward){
-            swap(recommendation_list[upward], recommendation_list[downward]);
+    for (int j = low; j <= high - 1; j++) {
+        if (recommendation_list[j].second >= pivot_value) {
+            i++;
+            swap(recommendation_list[i], recommendation_list[j]);
         }
     }
-    swap(recommendation_list[low], recommendation_list[downward]);
-    return downward;
+    swap(recommendation_list[i + 1], recommendation_list[high]);
+    return (i + 1);
 }
 
 
